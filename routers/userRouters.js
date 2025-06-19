@@ -1,11 +1,13 @@
 const Router = require('router');
-const {fetchUsers, createUser, fetchAUser, updateUser, deleteUser} = require('../controllers/userController');
+const {fetchUsers, createUser, fetchAUser, updateUser, deleteUser, login} = require('../controllers/userController');
 
 
 const userRouter = Router()
 
 
 userRouter.post('/', createUser)
+
+userRouter.post('/login', login)
 
 userRouter.get('/', fetchUsers)
 

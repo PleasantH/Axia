@@ -1,23 +1,7 @@
+const bcrypt = require('bcrypt');
 const User = require('../schema/userSchema')
 
-const createUser = async (req, res) => {
-    try {
-        const {userName, password, email} = req.body;
-        if (!userName | !password | !email) {
-            return res.status(400).json({message: "Username or email or password is missing"})
-        }
-        const existingUser = await User.findOne({email})
-        if (existingUser) {
-            res.status(400).json({message: "A user with this email already exist, pls sign in"})
-            return
-        }
-       const newUser = new User(req.body)
-       await newUser.save()
-       res.status(201).json({message:'user created'})
-    } catch (error) {
-     res.send('error creating user', error )
-    }
-}
+
 
 const fetchUsers = async (req,res) => {
     try {
@@ -38,12 +22,69 @@ const fetchAUser = async (req,res) => {
     }
 }
 
+const createUser = async (req, res) => {
+    try {
+        const {userName, email, password, role} = req.body
+       if (!userName || !email || !password) {
+            return res.status(400).json({message: "Please fill all fields"})
+        }
+        const existingUser = await User.findOne({email})
+        if (existingUser) {
+            return res.status(400).json({message: "User already exists"})
+        }
+        const salt = 12;
+        const hashedPassword = await bcrypt.hashSync(password, salt)
+        const newUser = new User({
+            userName,
+            email,
+            password: hashedPassword, 
+            role
+        })
+        const savedUser = await newUser.save()
+        res.status(201).json({message: "User created successfully", data: savedUser})   
+    }
+    catch (error) {
+        console.error('Error creating user:', error);
+        return res.status(500).json({message: "An error occurred while creating the user", error: error.message})
+    }
+}
+
+const login = async (req, res) => {
+    try {
+          const {email, password} = req.body
+       if (!email || !password) {
+            return res.status(400).json({message: "Please fill all fields"})
+        }
+        const existingUser = await User.findOne({email})
+        if (!existingUser) {
+            return res.status(400).json({message: "User doesn't exist, kindly sign up"})
+        } 
+        const isPasswordCorrect = await bcrypt.compareSync(password, existingUser.password)
+        if (!isPasswordCorrect) {
+            return res.status(400).json({message: "Invalid email or password"})
+        }
+        res.status(201).json({message: "User retrieved successfully", data: existingUser})  
+    } catch (error) {
+        console.error('Error logging user:', error);
+        return res.status(500).json({message: "An error occurred logging the user", error: error.message})
+    }
+}
+
 const updateUser = async (req,res) => {
     try {
-        const {userName} = req.body
+        const {userName, loggedInUserId} = req.body
          const { email} = req.params
-
+        if (!userName || !loggedInUserId) {
+            return res.status(400).json({message: "Please fill all fields"})
+        }
         const user = await User.findOne({email})
+        const loggedInUser = await User.findById({_id: loggedInUserId})
+        const isSameUser = user._id.toString() == loggedInUser._id.toString()
+        const isAdmin = loggedInUser.role === 'admin' || loggedInUser.role === 'superAdmin'
+        if (!isSameUser && !isAdmin) {
+            console.log("User is not authorized to update this user", isSameUser, isAdmin)
+            return res.status(403).json({message: "You are not authorized to update this user"})
+        }
         if (user.userName === userName ) {
             return res.status(400).json({message: "This is already your username"})
         }
@@ -51,7 +92,8 @@ const updateUser = async (req,res) => {
         if (existingUserName) {
             return res.status(400).json({message: "This username is already taken"})
         }
-        const updated = await User.findOneAndUpdate({email}, {userName}, {new: true} )
+        const updated = await User.findOneAndUpdate({email}, { $set: { userName } },
+            {new: true} )
         res.status(200).json(updated)
     } catch (error) {
  return res.status(500).json({message: "error"})
@@ -61,12 +103,21 @@ const updateUser = async (req,res) => {
 
 const deleteUser = async (req,res) => {
    try {
+    const {loggedInUserId} = req.body
     const {email} = req.params
+     if (!loggedInUserId) {
+            return res.status(400).json({message: "Please fill all fields"})}
     const user = await User.findOne({email})
-
+    const loggedInUser = await User.findById({_id: loggedInUserId})
+    const isSameUser = user._id.toString() == loggedInUser._id.toString()
+    const isAdmin = loggedInUser.role === 'admin'
+    if (!isSameUser && !isAdmin) {
+            console.log("User is not authorized to delete this user", isSameUser, isAdmin)
+            return res.status(403).json({message: "You are not authorized to delete this user"})}
     if (!user || typeof email !== 'string') {
             return res.status(404).json({message: "user doesn't exist"})
         }
+
         const deleted = await User.findOneAndDelete({email})
         res.status(200).json({ message: "User deleted successfully", data: deleted });
         
@@ -77,4 +128,4 @@ const deleteUser = async (req,res) => {
    } 
 }
 
-module.exports = {fetchUsers, fetchAUser, createUser, updateUser, deleteUser}
+module.exports = {fetchUsers, fetchAUser, createUser, updateUser, deleteUser, login}
