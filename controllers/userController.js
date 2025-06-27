@@ -84,11 +84,11 @@ const login = async (req, res) => {
             expiresIn: process.env.JWT_EXPIRES_IN || '1h',
         });
         res.cookie("access_token", token, {
-        httpOnly: true,           // Can't be accessed via JavaScript (for security)
-        secure: process.env.NODE_ENV === "production", 
-      sameSite: "strict",       
-      maxAge: 60 * 60 * 1000    
-    });
+            httpOnly: true,           // Can't be accessed via JavaScript (for security)
+            secure: process.env.NODE_ENV === "production", 
+            sameSite: "strict",       
+            maxAge: 60 * 60 * 1000    
+        });
 
     
         console.log('Token generated:', token);
@@ -103,6 +103,20 @@ const login = async (req, res) => {
     }
 }
 
+const logout = async (req, res) => {
+  try {
+    res.clearCookie("access_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({ message: "An error occurred during logout", error: error.message });
+  }
+};
 
 
 const updateUser = async (req,res) => {
@@ -169,4 +183,4 @@ const deleteUser = async (req,res) => {
    } 
 }
 
-module.exports = {fetchUsers, fetchAUser, createUser, updateUser, deleteUser, login}
+module.exports = {fetchUsers, fetchAUser, createUser, updateUser, deleteUser, login, logout}

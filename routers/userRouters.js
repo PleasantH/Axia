@@ -1,5 +1,5 @@
 const Router = require('router');
-const {fetchUsers, createUser, fetchAUser, updateUser, deleteUser, login} = require('../controllers/userController');
+const {fetchUsers, createUser, fetchAUser, updateUser, deleteUser, login, logout} = require('../controllers/userController');
 
 
 const userRouter = Router()
@@ -8,6 +8,8 @@ const userRouter = Router()
 userRouter.post('/', createUser)
 
 userRouter.post('/login', login)
+
+userRouter.post('/logout', logout)
 
 userRouter.get('/', fetchUsers)
 
