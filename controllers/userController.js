@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../schema/userSchema')
-
+const jwt = require('jsonwebtoken');
 
 
 const fetchUsers = async (req,res) => {
@@ -75,27 +75,51 @@ const login = async (req, res) => {
         const existingUser = await User.findOne({email})
         if (!existingUser) {
             return res.status(400).json({message: "User doesn't exist, kindly sign up"})
-        } 
+        }
         const isPasswordCorrect = await bcrypt.compareSync(password, existingUser.password)
         if (!isPasswordCorrect) {
             return res.status(400).json({message: "Invalid email or password"})
         }
-        res.status(201).json({message: "User retrieved successfully", data: existingUser})  
+        const token = jwt.sign({ id: existingUser.id }, process.env.JWT_SECRET, {
+            expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+        });
+        res.cookie("access_token", token, {
+        httpOnly: true,           // Can't be accessed via JavaScript (for security)
+        secure: process.env.NODE_ENV === "production", 
+      sameSite: "strict",       
+      maxAge: 60 * 60 * 1000    
+    });
+
+    
+        console.log('Token generated:', token);
+        res.status(201).json({message: "User retrieved successfully", data: {
+            userName: existingUser.userName,
+            email: existingUser.email,
+            role: existingUser.role
+        }})  
     } catch (error) {
         console.error('Error logging user:', error);
         return res.status(500).json({message: "An error occurred logging the user", error: error.message})
     }
 }
 
+
+
 const updateUser = async (req,res) => {
     try {
-        const {userName, loggedInUserId} = req.body
+        const {userName, token} = req.body
          const { email} = req.params
-        if (!userName || !loggedInUserId) {
+        if (!userName) {
             return res.status(400).json({message: "Please fill all fields"})
         }
+const decoded = jwt.verify(token, process.env.JWT_SECRET, function(err, decoded) {
+    if (err) {
+        return res.status(401).json({message: "Invalid token"});
+    }
+  return decoded;
+});
         const user = await User.findOne({email})
-        const loggedInUser = await User.findById({_id: loggedInUserId})
+        const loggedInUser = await User.findById({_id: decoded.id})
         const isSameUser = user._id.toString() == loggedInUser._id.toString()
         const isAdmin = loggedInUser.role === 'admin' || loggedInUser.role === 'superAdmin'
         if (!isSameUser && !isAdmin) {
@@ -113,8 +137,8 @@ const updateUser = async (req,res) => {
             {new: true} )
         res.status(200).json(updated)
     } catch (error) {
+        console.log('error', error)
  return res.status(500).json({message: "error"})
-        console.log('error')
     }
 }
 
