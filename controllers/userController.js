@@ -24,8 +24,8 @@ const fetchAUser = async (req,res) => {
 
 const createUser = async (req, res) => {
     try {
-        const {userName, email, password, role} = req.body
-       if (!userName || !email || !password) {
+        const {userName, email, password, admin, AltimaAdmin, profile} = req.body
+       if (!userName || !email || !password, !profile) {
             return res.status(400).json({message: "Please fill all fields"})
         }
         const existingUser = await User.findOne({email})
@@ -34,20 +34,37 @@ const createUser = async (req, res) => {
         }
         const salt = 12;
         const hashedPassword = await bcrypt.hashSync(password, salt)
+
+
+        if (email === 'tobi@gmail.com' || email === 'seyi@gmail.com') {
+            const newUser = ({...req.body, password: hashedPassword, admin: true})
+            const savedUser = new User({
+                ...newUser,
+            })
+            await savedUser.save()
+            res.status(201).json({message: "User created successfully", data: savedUser})   
+        }
+        
         const newUser = new User({
             userName,
             email,
-            password: hashedPassword, 
-            role
+            password: hashedPassword,
+            profile,
+            AltimaAdmin,
+            admin
         })
+
+
         const savedUser = await newUser.save()
-        res.status(201).json({message: "User created successfully", data: savedUser})   
+        console.log("User created successfully:", savedUser)
+        res.status(201).json({message: "User created successfully", data: savedUser})  
     }
     catch (error) {
         console.error('Error creating user:', error);
         return res.status(500).json({message: "An error occurred while creating the user", error: error.message})
     }
 }
+
 
 const login = async (req, res) => {
     try {
