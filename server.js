@@ -1,9 +1,8 @@
 const express = require("express")
 const dotenv = require("dotenv")
 const connectdb = require('./dbconnect/mongodb')
-const userRouter = require("./routers/userRouters")
-const productRouter = require("./routers/productRoutes")
-const cartRouter = require("./routers/cartRoutes")
+const {userRouter, productRouter, cartRouter} = require("./routers")
+
 
 dotenv.config()
 

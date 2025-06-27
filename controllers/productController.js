@@ -1,5 +1,4 @@
-const Product = require('../schema/productSchema')
-const User = require('../schema/userSchema')
+const {Product, User} = require('../schema')
 
 
 const createProduct = async (req,res) => {

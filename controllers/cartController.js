@@ -1,5 +1,4 @@
-const Product = require('../schema/productSchema')
-const Cart = require('../schema/cartSchema')
+const {Product, Cart} = require('../schema')
 
 
 const createCart = async (req,res) => {
